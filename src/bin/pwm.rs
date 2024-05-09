@@ -8,7 +8,7 @@ use embassy_stm32::gpio::OutputType;
 use embassy_stm32::time::Hertz;
 use embassy_stm32::timer::{
     simple_pwm::{PwmPin, SimplePwm},
-    Channel,
+    CountingMode::EdgeAlignedUp, Channel,
 };
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
@@ -19,7 +19,7 @@ async fn main(_spawner: Spawner) {
     info!("Hello World!");
 
     let ch1 = PwmPin::new_ch1(p.PE9, OutputType::PushPull);
-    let mut pwm = SimplePwm::new(p.TIM1, Some(ch1), None, None, None, Hertz::khz(10));
+    let mut pwm = SimplePwm::new(p.TIM1, Some(ch1), None, None, None, Hertz::khz(10), EdgeAlignedUp);
     let max = pwm.get_max_duty();
     pwm.enable(Channel::Ch1);
 

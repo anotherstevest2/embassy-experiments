@@ -24,39 +24,37 @@ async fn main(_spawner: Spawner) {
     let mut adc = Adc::new(p.ADC1, Irqs, &mut Delay);
     info!("done");
 
-    let mut pin = p.PC1;
-    // pin.set_as_analog();
-    // let mut vref = adc.enable_vref(&mut Delay);
-    // let mut temp = adc.enable_temperature();
+    let mut temperature = adc.enable_temperature();
+    let mut vref = adc.enable_vref(&mut Delay);
 
-    // let vref_sample = adc.read(&mut vref).await;
+    let vref_sample = adc.read(&mut vref).await;
 
-    // let convert_to_millivolts = |sample| {
-    //     // From http://www.st.com/resource/en/datasheet/DM00071990.pdf
-    //     // 6.3.24 Reference voltage
-    //     const VREFINT_MV: u32 = 1210; // mV
+    let convert_to_millivolts = |sample| {
+        // From http://www.st.com/resource/en/datasheet/DM00071990.pdf
+        // 6.3.24 Reference voltage
+        const VREFINT_MV: u32 = 1210; // mV
 
-    //     (u32::from(sample) * VREFINT_MV / u32::from(vref_sample)) as u16
-    // };
+        (u32::from(sample) * VREFINT_MV / u32::from(vref_sample)) as u16
+    };
 
-    // let convert_to_celcius = |sample| {
-    //     // From http://www.st.com/resource/en/datasheet/DM00071990.pdf
-    //     // 6.3.22 Temperature sensor characteristics
-    //     const V25: i32 = 760; // mV
-    //     const AVG_SLOPE: f32 = 2.5; // mV/C
+    let convert_to_celcius = |sample| {
+        // From http://www.st.com/resource/en/datasheet/DM00071990.pdf
+        // 6.3.22 Temperature sensor characteristics
+        const V25: i32 = 760; // mV
+        const AVG_SLOPE: f32 = 2.5; // mV/C
 
-    //     let sample_mv = convert_to_millivolts(sample) as i32;
+        let sample_mv = convert_to_millivolts(sample) as i32;
 
-    //     (sample_mv - V25) as f32 / AVG_SLOPE + 25.0
-    // };
+        (sample_mv - V25) as f32 / AVG_SLOPE + 25.0
+    };
 
-    // info!("Vref: {}", vref_sample);
-    // const MAX_ADC_SAMPLE: u16 = (1 << 12) - 1;
-    // info!("VCCA: {} mV", convert_to_millivolts(MAX_ADC_SAMPLE));
+    info!("Vref sample: {}", vref_sample);
+    const MAX_ADC_SAMPLE: u16 = (1 << 12) - 1;
+    info!("VCCA: {} mV", convert_to_millivolts(MAX_ADC_SAMPLE));
 
     loop {
         // Read pin
-        let v = adc.read(&mut pin).await;
+        let v = adc.read(&mut temperature).await;
         info!("PC1: {}", v);
 
         Timer::after(Duration::from_millis(100)).await;
