@@ -4,10 +4,11 @@
 
 use defmt::*;
 use embassy_executor::Spawner;
-use embassy_stm32::bind_interrupts;
 // use embassy_stm32::gpio::low_level::Pin;
+use embassy_stm32::adc::Adc;
 use embassy_stm32::peripherals;
-use embassy_stm32::adc::{self, Adc};
+use embassy_stm32::time::Hertz;
+use embassy_stm32::{adc, bind_interrupts, Config};
 use embassy_time::{Delay, Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
@@ -17,9 +18,22 @@ bind_interrupts!(pub struct Irqs {
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
-    let p = embassy_stm32::init(Default::default());
+    let mut config = Config::default();
+    {
+        use embassy_stm32::rcc::*;
+        config.rcc.hse = Some(Hertz::mhz(8));
+        config.rcc.bypass_hse = true;
+        config.rcc.sysclk = Some(Hertz::mhz(48));
+        config.rcc.hclk = Some(Hertz::mhz(48));
+        config.rcc.pclk1 = Some(Hertz::mhz(24));
+        config.rcc.pclk2 = Some(Hertz::mhz(48));
+        config.rcc.pll48 = true;
+        config.rcc.adc = Some(AdcClockSource::Pll(Adcpres::DIV1));
+        config.rcc.adc34 = None;
+    }
+    let mut p = embassy_stm32::init(config);
     info!("Hello World!");
-
+    // loop {} // spin forever
     info!("create ADC...");
     let mut adc = Adc::new(p.ADC1, Irqs, &mut Delay);
     info!("done");

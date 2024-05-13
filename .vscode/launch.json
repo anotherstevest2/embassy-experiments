@@ -30,7 +30,7 @@
             "env": {
                 "RUST_LOG": "Info"
             },
-            "consoleLogLevel": "Info", //Console, Info, Debug        
+            "consoleLogLevel": "Console", //Console, Info, Debug        
         },
         {
             "type": "probe-rs-debug",
@@ -58,7 +58,7 @@
             "env": {
                 "RUST_LOG": "info"
             },
-            "consoleLogLevel": "Debug", //Console, Info, Debug
+            "consoleLogLevel": "Console", //Console, Info, Debug
         },
         {
             "type": "probe-rs-debug",
@@ -86,7 +86,7 @@
             "env": {
                 "RUST_LOG": "Info"
             },
-            "consoleLogLevel": "Info", //Console, Info, Debug        
+            "consoleLogLevel": "Console", //Console, Info, Debug        
         },
         {
             "type": "probe-rs-debug",
@@ -114,7 +114,7 @@
             "env": {
                 "RUST_LOG": "info"
             },
-            "consoleLogLevel": "Debug", //Console, Info, Debug
+            "consoleLogLevel": "Console", //Console, Info, Debug
         },
         {
             "type": "probe-rs-debug",
@@ -142,7 +142,7 @@
             "env": {
                 "RUST_LOG": "info"
             },
-            "consoleLogLevel": "Debug", //Console, Info, Debug
+            "consoleLogLevel": "Console", //Console, Info, Debug
         },
         {
             "type": "probe-rs-debug",
@@ -170,7 +170,7 @@
             "env": {
                 "RUST_LOG": "info"
             },
-            "consoleLogLevel": "Debug", //Console, Info, Debug
+            "consoleLogLevel": "Console", //Console, Info, Debug
         }
     ]
 }
