@@ -9,4 +9,4 @@ target = "thumbv7em-none-eabihf"
 debug = true
 
 [env]
-DEFMT_LOG = "trace"
+DEFMT_LOG = "info"
