@@ -51,18 +51,28 @@ async fn main(_spawner: Spawner) {
     }
 
     fn convert_to_celcius(sample: u16, vrefint_sample: u16) -> f64 {
+        let ts_cal1 =  0x0507; // (swapped) 30degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7c2 on my discovery board
+        let ts_cal2 = 0x06ca; // (swapped) 110degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7b8 0x1ffff7c2 on my discovery board
         // let ts_cal1 = 0x06ca; // 30degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7b8 on my discovery board
         // let ts_cal2 = 0x0507; // 110degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7c2 on my discovery board
-        // It appears that the factory values are stored backwards *or* the datasheets documents them backwards
-        let ts_cal1 =  0x0507;// (swapped) 30degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7c2 on my discovery board
-        let ts_cal2 = 0x06ca; // (swapped) 110degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7b8 0x1ffff7c2 on my discovery board
         let vrefint_cal = 0x05f8; // nominal 1.23V ref factory saved reading at 3.3Vdda, manually read from 0x1ffff7ba on my discovery board
-        let slope = (110 - 30) as f64 / (convert_to_millivolts(ts_cal2, vrefint_cal) - convert_to_millivolts(ts_cal1, vrefint_cal)); // degC/mV
-        debug!("slope: {} degC/mv", slope);
-        let intercept_30deg = convert_to_millivolts(ts_cal1, vrefint_cal);
-        debug!("30deg point: {}", intercept_30deg);
 
-        (convert_to_millivolts(sample, vrefint_sample) - intercept_30deg) * slope + 30.0
+        // DegC on y, mv on  x, note the negative slope
+        let slope = -(110 - 30) as f64/(convert_to_millivolts(ts_cal1, vrefint_cal) - convert_to_millivolts(ts_cal2, vrefint_cal));  // rise/run with rise being negative
+        let y_intercept = (-convert_to_millivolts(ts_cal1, vrefint_cal) * slope) + 30.0;
+        debug!("slope: {} degC/mv, y_intercept: {} degC", slope, y_intercept);
+        slope * convert_to_millivolts(sample, vrefint_sample) + y_intercept
+
+        // It appears that the factory values are stored backwards *or* the datasheets documents them backwards but they aren't
+        // let ts_cal1 =  0x0507;// (swapped) 30degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7c2 on my discovery board
+        // let ts_cal2 = 0x06ca; // (swapped) 110degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7b8 0x1ffff7c2 on my discovery board
+        // let vrefint_cal = 0x05f8; // nominal 1.23V ref factory saved reading at 3.3Vdda, manually read from 0x1ffff7ba on my discovery board
+        // let slope = (110 - 30) as f64 / (convert_to_millivolts(ts_cal2, vrefint_cal) - convert_to_millivolts(ts_cal1, vrefint_cal)); // degC/mV
+        // debug!("slope: {} degC/mv", slope);
+        // let intercept_30deg = convert_to_millivolts(ts_cal1, vrefint_cal);
+        // debug!("30deg point: {}", intercept_30deg);
+
+        // (convert_to_millivolts(sample, vrefint_sample) - intercept_30deg) * slope + 30.0
     }
 
     for _ in 0..10 {
