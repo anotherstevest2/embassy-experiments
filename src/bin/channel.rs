@@ -6,10 +6,7 @@ use futures::join;
 
 use defmt::*;
 use embassy_executor::Spawner;
-use embassy_sync::{
-    blocking_mutex::raw::*,
-    channel,
-};
+use embassy_sync::{blocking_mutex::raw::*, channel};
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 

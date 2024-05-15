@@ -28,7 +28,7 @@ async fn main(_spawner: Spawner) {
         config.rcc.pclk1 = Some(Hertz::mhz(24));
         config.rcc.pclk2 = Some(Hertz::mhz(48));
         config.rcc.pll48 = true;
-        config.rcc.adc = Some(AdcClockSource::Pll(Adcpres::DIV1));  // 48MHz -> 20.83333 ns
+        config.rcc.adc = Some(AdcClockSource::Pll(Adcpres::DIV1)); // 48MHz -> 20.83333 ns
         config.rcc.adc34 = None;
     }
     let p = embassy_stm32::init(config);
@@ -36,52 +36,70 @@ async fn main(_spawner: Spawner) {
 
     debug!("create ADC...");
     let mut adc = Adc::new(p.ADC1, Irqs, &mut Delay);
-    adc.sample_time_for_us(3);  // >= 2.2 us per 6.3.22 in STMicrosystems doc DS9118 Rev 14
+    adc.sample_time_for_us(3); // >= 2.2 us per 6.3.22 in STMicrosystems doc DS9118 Rev 14
     debug!("done");
 
     let mut temperature = adc.enable_temperature();
     let mut vrefint = adc.enable_vref(&mut Delay);
+    struct TempCal {
+        slope: f64,
+        y_intercept: f64,
+    }
+
+    // let ts_cal1 = 0x0507; // (swapped) 30degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7c2 on my discovery board
+    // let ts_cal2 = 0x06ca; // (swapped) 110degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7b8 0x1ffff7c2 on my discovery board
+    let ts_cal1 = 0x06ca; // 30degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7b8 on my discovery board
+    let ts_cal2 = 0x0507; // 110degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7c2 on my discovery board
+    let vrefint_cal = 0x05f8; // nominal 1.23V ref factory saved reading at 3.3Vdda, manually read from 0x1ffff7ba on my discovery board
+
+    // DegC on y, mv on  x, note the negative slope
+    let cals = TempCal {
+        slope: -(110 - 30) as f64
+            / (convert_to_millivolts(ts_cal1, vrefint_cal)
+                - convert_to_millivolts(ts_cal2, vrefint_cal)), // rise/run with rise being negative
+        y_intercept: (-convert_to_millivolts(ts_cal1, vrefint_cal)
+            * (-(110 - 30) as f64
+                / (convert_to_millivolts(ts_cal1, vrefint_cal)
+                    - convert_to_millivolts(ts_cal2, vrefint_cal))))
+            + 30.0, // note the subexpression for slope as I don't think I can self.slope or similar
+    };
+
+    debug!(
+        "slope: {} degC/mv, y_intercept: {} degC",
+        cals.slope, cals.y_intercept
+    );
 
     fn convert_to_millivolts(sample: u16, vrefint_sample: u16) -> f64 {
         let vrefint_cal = 0x05f8; // nominal 1.23V ref factory saved reading at 3.3Vdda, manually read from 0x1ffff7ba on my discovery board
-        let vdda_mv = f64::from(adc::VDDA_CALIB_MV) * f64::from(vrefint_cal) / f64::from(vrefint_sample) ;
+        let vdda_mv =
+            f64::from(adc::VDDA_CALIB_MV) * f64::from(vrefint_cal) / f64::from(vrefint_sample);
         let mv_per_count = vdda_mv / f64::from(adc::ADC_MAX);
 
         f64::from(sample) * mv_per_count
     }
 
-    fn convert_to_celcius(sample: u16, vrefint_sample: u16) -> f64 {
-        let ts_cal1 =  0x0507; // (swapped) 30degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7c2 on my discovery board
-        let ts_cal2 = 0x06ca; // (swapped) 110degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7b8 0x1ffff7c2 on my discovery board
-        // let ts_cal1 = 0x06ca; // 30degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7b8 on my discovery board
-        // let ts_cal2 = 0x0507; // 110degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7c2 on my discovery board
-        let vrefint_cal = 0x05f8; // nominal 1.23V ref factory saved reading at 3.3Vdda, manually read from 0x1ffff7ba on my discovery board
-
-        // DegC on y, mv on  x, note the negative slope
-        let slope = -(110 - 30) as f64/(convert_to_millivolts(ts_cal1, vrefint_cal) - convert_to_millivolts(ts_cal2, vrefint_cal));  // rise/run with rise being negative
-        let y_intercept = (-convert_to_millivolts(ts_cal1, vrefint_cal) * slope) + 30.0;
-        debug!("slope: {} degC/mv, y_intercept: {} degC", slope, y_intercept);
-        slope * convert_to_millivolts(sample, vrefint_sample) + y_intercept
-
-        // It appears that the factory values are stored backwards *or* the datasheets documents them backwards but they aren't
-        // let ts_cal1 =  0x0507;// (swapped) 30degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7c2 on my discovery board
-        // let ts_cal2 = 0x06ca; // (swapped) 110degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7b8 0x1ffff7c2 on my discovery board
-        // let vrefint_cal = 0x05f8; // nominal 1.23V ref factory saved reading at 3.3Vdda, manually read from 0x1ffff7ba on my discovery board
-        // let slope = (110 - 30) as f64 / (convert_to_millivolts(ts_cal2, vrefint_cal) - convert_to_millivolts(ts_cal1, vrefint_cal)); // degC/mV
-        // debug!("slope: {} degC/mv", slope);
-        // let intercept_30deg = convert_to_millivolts(ts_cal1, vrefint_cal);
-        // debug!("30deg point: {}", intercept_30deg);
-
-        // (convert_to_millivolts(sample, vrefint_sample) - intercept_30deg) * slope + 30.0
+    fn convert_to_celcius(cals: &TempCal, sample: u16, vrefint_sample: u16) -> f64 {
+        cals.slope * convert_to_millivolts(sample, vrefint_sample) + cals.y_intercept
     }
 
-    for _ in 0..10 {
-    let vrefint_cal = 0x05f8; // nominal 1.23V ref factory saved reading at 3.3Vdda, manually read from 0x1ffff7ba on my discovery board
+    debug!(
+        "temp cal confirmation (should be 30, 110) {}, {}",
+        convert_to_celcius(&cals, ts_cal1, vrefint_cal),
+        convert_to_celcius(&cals, ts_cal2, vrefint_cal)
+    );
+
     let vrefint_sample = adc.read(&mut vrefint).await;
-    let vdda_mv = f64::from(adc::VDDA_CALIB_MV) * f64::from(vrefint_cal) / f64::from(vrefint_sample) ;
-    debug!("vdda_mv: {}", vdda_mv);
-    Timer::after(Duration::from_millis(100)).await;
-}
+    debug!("adc converter cal confirmation (should be internal vrefint = 1230 mV) {}", convert_to_millivolts(vrefint_sample, vrefint_sample));
+
+    debug!("Note the initial drift in vdda_mv due to processor changing from reset to running this code (and no design on 32f3Discovery to prevent it):");
+    for _ in 0..10 {
+        let vrefint_cal = 0x05f8; // nominal 1.23V ref factory saved reading at 3.3Vdda, manually read from 0x1ffff7ba on my discovery board
+        let vrefint_sample = adc.read(&mut vrefint).await;
+        let vdda_mv =
+            f64::from(adc::VDDA_CALIB_MV) * f64::from(vrefint_cal) / f64::from(vrefint_sample);
+        debug!("vdda_mv: {}", vdda_mv);
+        Timer::after(Duration::from_millis(100)).await;
+    }
 
     loop {
         // Read pins
@@ -89,10 +107,18 @@ async fn main(_spawner: Spawner) {
         let vrefint_sample1 = adc.read(&mut vrefint).await;
         let t = adc.read(&mut temperature).await;
         let vrefint_sample2 = adc.read(&mut vrefint).await;
-        let vrefint_sample = vrefint_sample1/2 + vrefint_sample2/2;
-        
-        debug!("temp sample: {}, vrefint_sample: {}, Degrees C: {}", t, vrefint_sample, convert_to_celcius(t, vrefint_sample));
-        info!("Temperature: {} degrees C", convert_to_celcius(t, vrefint_sample));
+        let vrefint_sample = vrefint_sample1 / 2 + vrefint_sample2 / 2;
+
+        debug!(
+            "temp sample: {}, vrefint_sample: {}, Degrees C: {}",
+            t,
+            vrefint_sample,
+            convert_to_celcius(&cals, t, vrefint_sample)
+        );
+        info!(
+            "Temperature: {} degrees C",
+            convert_to_celcius(&cals, t, vrefint_sample)
+        );
 
         Timer::after(Duration::from_millis(100)).await;
     }
