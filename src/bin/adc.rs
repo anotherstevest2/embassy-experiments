@@ -32,7 +32,7 @@ async fn main(_spawner: Spawner) {
         // The reason the calibration never completes is that the clock initialization which occurs during
         // the embassy_stm32::init (see: embassy-stm32-0.1.0/src/rcc/f3.rs:237) attempts to update the CKMODE bits (ADC clock mode) in the ADC peripheral
         // to configure the AdcClockSource and this operation silently fails as the ADC peripheral has not yet been
-        // enabled (which occurs during Adc::new()).  The only way to hack it is within Adc::new() as this 
+        // enabled (which occurs during Adc::new()).  The only way to hack it is within Adc::new() as this
         // is where both the ADC peripheral is enabled *and* where the Adc Cal takes place.
         // config.rcc.adc = Some(AdcClockSource::BusDiv1);  // HCLK Synchronous Mode 48MHz -> 20.83333 ns )
         config.rcc.adc = Some(AdcClockSource::Pll(Adcpres::DIV1)); // PLL Asynchronous Mode 48MHz -> 20.83333 ns
@@ -58,12 +58,12 @@ async fn main(_spawner: Spawner) {
     // for reading either ts_cal1 or ts_cal2 which seems to be an oversight.
     let ts_cal1_rawptr = 0x1ffff7b8 as *const u16;
     let ts_cal1_ref = unsafe { ts_cal1_rawptr.as_ref().unwrap() };
-    let ts_cal1 = *ts_cal1_ref;                         
+    let ts_cal1 = *ts_cal1_ref;
     // defmt::assert!(ts_cal1 == 0x06cau16);
 
     let ts_cal2_rawptr = 0x1ffff7c2 as *const u16;
     let ts_cal2_ref = unsafe { ts_cal2_rawptr.as_ref().unwrap() };
-    let ts_cal2 = *ts_cal2_ref;                         
+    let ts_cal2 = *ts_cal2_ref;
     // defmt::assert!(ts_cal2 == 0x0507u16);
 
     debug!("create ADC...");
