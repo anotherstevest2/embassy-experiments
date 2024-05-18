@@ -45,6 +45,7 @@ async fn main(_spawner: Spawner) {
     // let ts_cal1 = 0x06cau16; // 30degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7b8 on my discovery board
     // let ts_cal2 = 0x0507u16; // 110degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7c2 on my discovery board
     // let vrefint_cal = 0x05f8u16; // nominal 1.23V ref factory saved reading at 3.3Vdda, manually read from 0x1ffff7ba on my discovery board
+
     // The following (commented out)doesn't work - the read panics as the contract for "read_volatile" (called during the vrefint.value() call)
     // is not upheld - Note that this read is of factory programmed non-volatile memory so the wrong unsafe contract is being applied.
     // let vrefint_cal = vrefint.value();
@@ -88,7 +89,7 @@ async fn main(_spawner: Spawner) {
         y_intercept: f64,
     }
 
-    // DegC on y, mv on  x, note the negative slope
+    // DegC on y, mv on x, note the negative slope
     let cals = TempCal {
         slope: -(110 - 30) as f64
             / (convert_to_millivolts(ts_cal1, vrefint_cal)
@@ -97,7 +98,7 @@ async fn main(_spawner: Spawner) {
             * (-(110 - 30) as f64
                 / (convert_to_millivolts(ts_cal1, vrefint_cal)
                     - convert_to_millivolts(ts_cal2, vrefint_cal))))
-            + 30.0, // note the subexpression for slope as I don't think I can self reference slope (i.e. use self.slope or similar)
+            + 30.0, // note the contained subexpression for slope as I don't think I can self reference slope (i.e. use self.slope or similar)
     };
 
     debug!(
@@ -106,7 +107,9 @@ async fn main(_spawner: Spawner) {
     );
 
     fn convert_to_millivolts(sample: u16, vrefint_sample: u16) -> f64 {
-        let vrefint_cal = 0x05f8; // nominal 1.23V ref factory saved reading at 3.3Vdda, manually read from 0x1ffff7ba on my discovery board
+        let vrefint_cal_rawptr = 0x1ffff7ba as *const u16;
+        let vrefint_cal_ref = unsafe { vrefint_cal_rawptr.as_ref().unwrap() };
+        let vrefint_cal = *vrefint_cal_ref;
         let vdda_mv =
             f64::from(adc::VDDA_CALIB_MV) * f64::from(vrefint_cal) / f64::from(vrefint_sample);
         let mv_per_count = vdda_mv / f64::from(adc::ADC_MAX);
