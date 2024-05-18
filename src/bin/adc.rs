@@ -41,7 +41,7 @@ async fn main(_spawner: Spawner) {
     let p = embassy_stm32::init(config);
     info!("Hello World!");
 
-    // I used ST's STM32CubeProgrammer to manually read the following values from flash
+    // I used ST's STM32CubeProgrammer to manually read the following values from flash (before I modified my code to do so)
     // let ts_cal1 = 0x06cau16; // 30degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7b8 on my discovery board
     // let ts_cal2 = 0x0507u16; // 110degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7c2 on my discovery board
     // let vrefint_cal = 0x05f8u16; // nominal 1.23V ref factory saved reading at 3.3Vdda, manually read from 0x1ffff7ba on my discovery board
@@ -53,19 +53,19 @@ async fn main(_spawner: Spawner) {
     let vrefint_cal_rawptr = 0x1ffff7ba as *const u16;
     let vrefint_cal_ref = unsafe { vrefint_cal_rawptr.as_ref().unwrap() };
     let vrefint_cal = *vrefint_cal_ref;
-    // defmt::assert!(vrefint_cal == 0x05f8u16);
+    // defmt::assert!(vrefint_cal == 0x05f8u16);  // chip dependent check
 
     // While we are provided with a way (which doesn't work...) for reading the adc cal value (via vrefint.value()), no similar way is provided
     // for reading either ts_cal1 or ts_cal2 which seems to be an oversight.
     let ts_cal1_rawptr = 0x1ffff7b8 as *const u16;
     let ts_cal1_ref = unsafe { ts_cal1_rawptr.as_ref().unwrap() };
     let ts_cal1 = *ts_cal1_ref;
-    // defmt::assert!(ts_cal1 == 0x06cau16);
+    // defmt::assert!(ts_cal1 == 0x06cau16);  // chip dependent check
 
     let ts_cal2_rawptr = 0x1ffff7c2 as *const u16;
     let ts_cal2_ref = unsafe { ts_cal2_rawptr.as_ref().unwrap() };
     let ts_cal2 = *ts_cal2_ref;
-    // defmt::assert!(ts_cal2 == 0x0507u16);
+    // defmt::assert!(ts_cal2 == 0x0507u16);  // chip dependent check
 
     debug!("create ADC...");
     let mut adc = Adc::new(p.ADC1, Irqs, &mut Delay);
@@ -151,7 +151,7 @@ async fn main(_spawner: Spawner) {
             / (ts_cal2 as i32 - ts_cal1 as i32))
             + 30i32;
         info!(
-            "Temperature: {} degrees C compared to {} (no adc vdda correction)",
+            "Temperature: {} degrees C compared to {} (fixed point, no adc vdda correction)",
             convert_to_celcius(&cals, t, vrefint_sample),
             temp2
         );
