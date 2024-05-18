@@ -28,7 +28,14 @@ async fn main(_spawner: Spawner) {
         config.rcc.pclk1 = Some(Hertz::mhz(24));
         config.rcc.pclk2 = Some(Hertz::mhz(48));
         config.rcc.pll48 = true;
-        config.rcc.adc = Some(AdcClockSource::Pll(Adcpres::DIV1)); // 48MHz -> 20.83333 ns
+        // The following (commented out) does not work due to the ADC hanging waiting for the adcal bit to clear
+        // The reason the calibration never completes is that the clock initialization which occurs during
+        // the embassy_stm32::init (see: embassy-stm32-0.1.0/src/rcc/f3.rs:237) attempts to update the CKMODE bits (ADC clock mode) in the ADC peripheral
+        // to configure the AdcClockSource and this operation silently fails as the ADC peripheral has not yet been
+        // enabled (which occurs during Adc::new()).  The only way to hack it is within Adc::new() as this 
+        // is where both the ADC peripheral is enabled *and* where the Adc Cal takes place.
+        // config.rcc.adc = Some(AdcClockSource::BusDiv1);  // HCLK Synchronous Mode 48MHz -> 20.83333 ns )
+        config.rcc.adc = Some(AdcClockSource::Pll(Adcpres::DIV1)); // PLL Asynchronous Mode 48MHz -> 20.83333 ns
         config.rcc.adc34 = None;
     }
     let p = embassy_stm32::init(config);
@@ -38,10 +45,17 @@ async fn main(_spawner: Spawner) {
     // let ts_cal1 = 0x06cau16; // 30degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7b8 on my discovery board
     // let ts_cal2 = 0x0507u16; // 110degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7c2 on my discovery board
     // let vrefint_cal = 0x05f8u16; // nominal 1.23V ref factory saved reading at 3.3Vdda, manually read from 0x1ffff7ba on my discovery board
-    // The following doesn't work - the read panics as the contract for "read_volatile" (called during the vrefint.value() call)
-    // is not upheld
+    // The following (commented out)doesn't work - the read panics as the contract for "read_volatile" (called during the vrefint.value() call)
+    // is not upheld - Note that this read is of factory programmed non-volatile memory so the wrong unsafe contract is being applied.
     // let vrefint_cal = vrefint.value();
 
+    let vrefint_cal_rawptr = 0x1ffff7ba as *const u16;
+    let vrefint_cal_ref = unsafe { vrefint_cal_rawptr.as_ref().unwrap() };
+    let vrefint_cal = *vrefint_cal_ref;
+    // defmt::assert!(vrefint_cal == 0x05f8u16);
+
+    // While we are provided with a way (which doesn't work...) for reading the adc cal value (via vrefint.value()), no similar way is provided
+    // for reading either ts_cal1 or ts_cal2 which seems to be an oversight.
     let ts_cal1_rawptr = 0x1ffff7b8 as *const u16;
     let ts_cal1_ref = unsafe { ts_cal1_rawptr.as_ref().unwrap() };
     let ts_cal1 = *ts_cal1_ref;                         
@@ -51,11 +65,6 @@ async fn main(_spawner: Spawner) {
     let ts_cal2_ref = unsafe { ts_cal2_rawptr.as_ref().unwrap() };
     let ts_cal2 = *ts_cal2_ref;                         
     // defmt::assert!(ts_cal2 == 0x0507u16);
-
-    let vrefint_cal_rawptr = 0x1ffff7ba as *const u16;
-    let vrefint_cal_ref = unsafe { vrefint_cal_rawptr.as_ref().unwrap() };
-    let vrefint_cal = *vrefint_cal_ref;
-    // defmt::assert!(vrefint_cal == 0x05f8u16);
 
     debug!("create ADC...");
     let mut adc = Adc::new(p.ADC1, Irqs, &mut Delay);
