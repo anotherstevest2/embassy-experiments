@@ -33,7 +33,8 @@ async fn main(_spawner: Spawner) {
         // the embassy_stm32::init (see: embassy-stm32-0.1.0/src/rcc/f3.rs:237) attempts to update the CKMODE bits (ADC clock mode) in the ADC peripheral
         // to configure the AdcClockSource and this operation silently fails as the ADC peripheral has not yet been
         // enabled (which occurs during Adc::new()).  The only way to hack it is within Adc::new() as this
-        // is where both the ADC peripheral is enabled *and* where the Adc Cal takes place.
+        // is where both the ADC peripheral is enabled *and* where the Adc Cal takes place. One work-around (used here) is to use the PLL
+        // clock for AdcClockSource which uses the reset/default value in CKMODE and therefore doesn't require updating
         // config.rcc.adc = Some(AdcClockSource::BusDiv1);  // HCLK Synchronous Mode 48MHz -> 20.83333 ns )
         config.rcc.adc = Some(AdcClockSource::Pll(Adcpres::DIV1)); // PLL Asynchronous Mode 48MHz -> 20.83333 ns
         config.rcc.adc34 = None;
