@@ -47,7 +47,7 @@ async fn main(_spawner: Spawner) {
     // let ts_cal2 = 0x0507u16; // 110degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7c2 on my discovery board
     // let vrefint_cal = 0x05f8u16; // nominal 1.23V ref factory saved reading at 3.3Vdda, manually read from 0x1ffff7ba on my discovery board
 
-    // The following (commented out)doesn't work - the read panics as the contract for "read_volatile" (called during the vrefint.value() call)
+    // The following (commented out) doesn't work - the read panics as the contract for "read_volatile" (called during the vrefint.value() call)
     // is not upheld - Note that this read is of factory programmed non-volatile memory so the wrong unsafe contract is being applied.
     // let vrefint_cal = vrefint.value();
 
