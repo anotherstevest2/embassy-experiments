@@ -7,7 +7,7 @@ use embassy_executor::Spawner;
 use embassy_stm32::adc::Adc;
 use embassy_stm32::peripherals;
 use embassy_stm32::time::Hertz;
-use embassy_stm32::{adc, bind_interrupts, Config};
+use embassy_stm32::{adc, adc::Vref, bind_interrupts, Config};
 use embassy_time::{Delay, Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
@@ -36,7 +36,7 @@ async fn main(_spawner: Spawner) {
 
     debug!("create ADC...");
     let mut adc = Adc::new(p.ADC1, Irqs, &mut Delay);
-    adc.sample_time_for_us(3); // >= 2.2 us per 6.3.22 in STMicrosystems doc DS9118 Rev 14
+    adc.set_sample_time(adc.sample_time_for_us(6)); // >= 2.2 us per 6.3.22 in STMicrosystems doc DS9118 Rev 14
     debug!("done");
 
     let mut temperature = adc.enable_temperature();
@@ -46,11 +46,11 @@ async fn main(_spawner: Spawner) {
         y_intercept: f64,
     }
 
-    // let ts_cal1 = 0x0507; // (swapped) 30degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7c2 on my discovery board
-    // let ts_cal2 = 0x06ca; // (swapped) 110degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7b8 0x1ffff7c2 on my discovery board
     let ts_cal1 = 0x06ca; // 30degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7b8 on my discovery board
     let ts_cal2 = 0x0507; // 110degC factory saved reading at 3.3Vdda, manually read from 0x1ffff7c2 on my discovery board
     let vrefint_cal = 0x05f8; // nominal 1.23V ref factory saved reading at 3.3Vdda, manually read from 0x1ffff7ba on my discovery board
+    //let vrefint_cal = vrefint.value();
+    //defmt::assert!(vrefint_cal == 0x05f8);
 
     // DegC on y, mv on  x, note the negative slope
     let cals = TempCal {
@@ -115,9 +115,10 @@ async fn main(_spawner: Spawner) {
             vrefint_sample,
             convert_to_celcius(&cals, t, vrefint_sample)
         );
+        let temp2 = (((110i32 - 30i32) * (t as i32 - ts_cal1 as i32)) / (ts_cal2 as i32 - ts_cal1 as i32)) + 30i32;
         info!(
-            "Temperature: {} degrees C",
-            convert_to_celcius(&cals, t, vrefint_sample)
+            "Temperature: {} degrees C compared to {} (no adc correction)",
+            convert_to_celcius(&cals, t, vrefint_sample), temp2
         );
 
         Timer::after(Duration::from_millis(100)).await;
