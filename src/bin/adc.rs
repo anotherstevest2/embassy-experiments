@@ -148,11 +148,11 @@ async fn main(_spawner: Spawner) {
             vrefint_sample,
             convert_to_celcius(&cals, t, vrefint_sample)
         );
-        let temp2 = (((110i32 - 30i32) * (t as i32 - ts_cal1 as i32))
+        let temp2 = (((110i32 - 30i32) * (((t as i32 * 3000i32) / 3300i32) - ts_cal1 as i32))
             / (ts_cal2 as i32 - ts_cal1 as i32))
             + 30i32;
         info!(
-            "Temperature: {} degrees C compared to {} (fixed point, no adc vdda correction)",
+            "Temperature: {} degrees C compared to {} (fixed point, nominal 3v/3.3v vdda correction)",
             convert_to_celcius(&cals, t, vrefint_sample),
             temp2
         );
