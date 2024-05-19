@@ -6,7 +6,7 @@ This repo contains example programs for the [STM32F3 Discovery board](https://ww
 
 ## Prerequisites
 
-To run these programs, you'll need a nightly rust toolchain for the thumbv7em-none-eabihf target:
+To run these programs, you'll need a nightly rust toolchain (this may no longer be true but I haven't checked) for the thumbv7em-none-eabihf target:
 
 ```sh
 rustup install nightly
@@ -39,10 +39,11 @@ These programs work:
   [See this example](https://github.com/embassy-rs/embassy/blob/main/examples/stm32f4/src/bin/pwm.rs)
 - **channel**: uses a Channel to communicate between two async tasks. If the receiver interval is larger than the sender interval, this will demonstrate backpressure.
 - **signal**: uses a Signal to communicate between two async tasks. If the receiver interval is larger than the sender interval, this will demonstrate overwriting without backpressure.
-
-These don't:
-
-- **adc**: should read a voltage from one of the ADC capable pins periodically. However, the program hangs at `Adc::new()`.
+- **adc**: reads ref and temp voltage from the ADC capable pins periodically and utilizes the factory-saved adc and temp calibrations to print the die 
+temperature in degrees C.
   [See this example](https://github.com/embassy-rs/embassy/blob/main/examples/stm32f4/src/bin/adc.rs)
+
+This doesn't:
+
 - **uart**: when TX and RX (PE0, PE1) are connected, should echo the UART output. However, no data is received and printed (I have not yet explicitly tested if the data is sent correctly).
   [See this example](https://github.com/embassy-rs/embassy/blob/main/examples/stm32f4/src/bin/usart_dma.rs)
