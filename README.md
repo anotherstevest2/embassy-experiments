@@ -1,4 +1,4 @@
-(As is apparent from the commit history, my starting point was shamlessly stolen from: https://github.com/SillyFreak/embassy-experiments)
+(As is apparent from the commit history, my starting point was shamlessly stolen from: https://github.com/SillyFreak/embassy-experiments, Copyright (c) 2023 Clemens Koza under the terms of the MIT License.)
 
 # Embassy Experiments
 
@@ -47,3 +47,19 @@ This doesn't:
 
 - **uart**: when TX and RX (PE0, PE1) are connected, should echo the UART output. However, no data is received and printed (I have not yet explicitly tested if the data is sent correctly).
   [See this example](https://github.com/embassy-rs/embassy/blob/main/examples/stm32f4/src/bin/usart_dma.rs)
+
+## License
+
+Licensed under
+
+* MIT license
+  ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option.
+
+## Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
+dual licensed as above, without any additional terms or conditions.
+
