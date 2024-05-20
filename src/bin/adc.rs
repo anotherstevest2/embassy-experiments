@@ -35,7 +35,13 @@ async fn main(_spawner: Spawner) {
         // enabled (which occurs during Adc::new()).  The only way to hack it is within Adc::new() as this
         // is where both the ADC peripheral is enabled *and* where the Adc Cal takes place. One work-around (used here) is to use the PLL
         // clock for AdcClockSource which uses the reset/default value in CKMODE and therefore doesn't require updating
+        // One possible non-breaking fix is to modify the rcc/src/f3.rc to ignore the rcc.adc field (since only one value works - doing so
+        // won't break anything that wasn't already broken) and add a method to adc to set the clock source which will only be runable 
+        // after adc.new has been run, and so we can assure that it is already enabled.  We may have to re-cal etc. (I haven't looked into that)
+        // but we can if required.
+
         // config.rcc.adc = Some(AdcClockSource::BusDiv1);  // HCLK Synchronous Mode 48MHz -> 20.83333 ns )
+
         config.rcc.adc = Some(AdcClockSource::Pll(Adcpres::DIV1)); // PLL Asynchronous Mode 48MHz -> 20.83333 ns
         config.rcc.adc34 = None;
     }
@@ -157,6 +163,6 @@ async fn main(_spawner: Spawner) {
             temp2
         );
 
-        Timer::after(Duration::from_millis(100)).await;
+        Timer::after(Duration::from_millis(1000)).await;
     }
 }
